@@ -249,7 +249,7 @@ class LogManager(object):
             very_nb_print('logger_name 设置为None和空字符串都是一个意义，在操作根日志命名空间，任何其他日志的行为将会发生变化，'
                           '一定要弄清楚原生logging包的日志name的意思。这个命名空间是双刃剑')
         self._logger_name = logger_name
-        self.logger: logging.Logger
+        self.logger : logging.Logger
         if logger_cls == logging.Logger:
             self.logger = logging.getLogger(logger_name)
         else:
@@ -411,7 +411,6 @@ class LogManager(object):
                 self.logger.removeHandler(handler)  # noqa
 
     def __add_a_hanlder(self, handlerx: logging.Handler):
-        handlerx.setLevel(10)
         handlerx.setFormatter(self._formatter)
         self.logger.addHandler(handlerx)
 
