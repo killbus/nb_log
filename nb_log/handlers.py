@@ -1,6 +1,9 @@
 # noinspection PyMissingOrEmptyDocstring
 import atexit
+import base64
 import copy
+import hashlib
+import hmac
 import multiprocessing
 import queue
 import re
@@ -12,6 +15,7 @@ import socket
 import datetime
 import json
 import time
+import urllib.parse
 import typing
 
 from collections import OrderedDict
@@ -847,9 +851,10 @@ class CompatibleSMTPSSLHandler(handlers.SMTPHandler):
 class DingTalkHandler(logging.Handler):
     _lock_for_remove_handlers = Lock()
 
-    def __init__(self, ding_talk_token=None, time_interval=60):
+    def __init__(self, ding_talk_token=None, ding_talk_secret=None, time_interval=60):
         super().__init__()
         self.ding_talk_token = ding_talk_token
+        self.ding_talk_secret = ding_talk_secret
         self._ding_talk_url = f'https://oapi.dingtalk.com/robot/send?access_token={ding_talk_token}'
         self._current_time = 0
         self._time_interval = time_interval  # 最好别频繁发。
@@ -873,7 +878,11 @@ class DingTalkHandler(logging.Handler):
         data = {"msgtype": "text", "text": {"content": message, "title": '这里的标题能起作用吗？？'}}
         try:
             self._remove_urllib_hanlder()  # 因为钉钉发送也是使用requests实现的，如果requests调用的urllib3命名空间也加上了钉钉日志，将会造成循环，程序卡住。一般情况是在根日志加了钉钉handler。
-            resp = requests.post(self._ding_talk_url, json=data, timeout=(5, 5))
+            url = self._ding_talk_url
+            if self.ding_talk_secret:
+                t, s = self.__sign()
+                url = f'{self._ding_talk_url}&timestamp={t}&sign={s}'
+            resp = requests.post(url, json=data, timeout=(5, 5))
             very_nb_print(f'钉钉返回 ： {resp.text}')
         except requests.RequestException as e:
             very_nb_print(f"发送消息给钉钉机器人失败 {e}")
@@ -893,6 +902,16 @@ class DingTalkHandler(logging.Handler):
             for index, hdlr in enumerate(logging.getLogger(logger_name).handlers):
                 if 'DingTalkHandler' in str(hdlr):
                     logging.getLogger(logger_name).handlers.pop(index)
+
+    def __sign(self):
+        timestamp = str(round(time.time() * 1000))
+        secret = self.ding_talk_secret
+        secret_enc = secret.encode('utf-8')
+        string_to_sign = '{}\n{}'.format(timestamp, secret)
+        string_to_sign_enc = string_to_sign.encode('utf-8')
+        hmac_code = hmac.new(secret_enc, string_to_sign_enc, digestmod=hashlib.sha256).digest()
+        _sign = urllib.parse.quote_plus(base64.b64encode(hmac_code))
+        return timestamp, _sign
 
 
 # noinspection PyPep8Naming
