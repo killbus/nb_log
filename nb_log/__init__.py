@@ -32,6 +32,7 @@ default_file_logger = LogManager('default_file_logger').get_logger_and_add_handl
 
 logger_dingtalk_common = LogManager('钉钉通用报警提示').get_logger_and_add_handlers(
     ding_talk_token=nb_log_config_default.DING_TALK_TOKEN,
+    ding_talk_secret=nb_log_config_default.DING_TALK_SECRET,
     log_filename='dingding_common.log')
 
 # warnings.simplefilter('always')  # 避免维护 sys.__dict__['__warningregistry__'] 字典,由 warning.warn 引起的内存泄漏
