@@ -345,6 +345,7 @@ class JsonFormatterJumpAble(JsonFormatter):
 
 
 DING_TALK_TOKEN = '3dd0eexxxxxadab014bd604XXXXXXXXXXXX'  # 钉钉报警机器人
+DING_TALK_SECRET = None
 
 EMAIL_HOST = ('smtp.sohu.com', 465)
 EMAIL_FROMADDR = 'aaa0509@sohu.com'  # 'matafyhotel-techl@matafy.com',
