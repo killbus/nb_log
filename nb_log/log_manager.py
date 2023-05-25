@@ -252,7 +252,7 @@ class LogManager(object):
                                     log_filename=None, log_file_size: int = None,
                                     log_file_handler_type: int = None,
                                     mongo_url=None, is_add_elastic_handler=False, is_add_kafka_handler=False,
-                                    ding_talk_token=None, ding_talk_time_interval=60,
+                                    ding_talk_token=None, ding_talk_secret=None, ding_talk_time_interval=60,
                                     mail_handler_config: MailHandlerConfig = MailHandlerConfig(),
                                     is_add_mail_handler=False,
                                     formatter_template: typing.Union[int, logging.Formatter] = None):
@@ -274,6 +274,7 @@ class LogManager(object):
        :param is_add_elastic_handler: 是否记录到es中。
        :param is_add_kafka_handler: 日志是否发布到kafka。
        :param ding_talk_token:钉钉机器人token
+       :param ding_talk_secret: 钉钉机器人加签密钥
        :param ding_talk_time_interval : 时间间隔，少于这个时间不发送钉钉消息
        :param mail_handler_config : 邮件配置
        :param is_add_mail_handler :是否发邮件
@@ -320,6 +321,7 @@ class LogManager(object):
         self._is_add_elastic_handler = is_add_elastic_handler
         self._is_add_kafka_handler = is_add_kafka_handler
         self._ding_talk_token = ding_talk_token
+        self._ding_talk_secret = ding_talk_secret
         self._ding_talk_time_interval = ding_talk_time_interval
         self._mail_handler_config = mail_handler_config
         self._is_add_mail_handler = is_add_mail_handler
@@ -457,7 +459,7 @@ class LogManager(object):
 
         # REMIND 添加钉钉日志。
         if not self._judge_logger_has_handler_type(DingTalkHandler) and self._ding_talk_token:
-            handler = DingTalkHandler(self._ding_talk_token, self._ding_talk_time_interval)
+            handler = DingTalkHandler(self._ding_talk_token, self._ding_talk_secret, self._ding_talk_time_interval)
             handler.setLevel(self._logger_level)
             self.__add_a_hanlder(handler)
 
@@ -473,7 +475,7 @@ def get_logger(name: typing.Union[str, None], *, log_level_int: int = None, is_a
                log_filename=None, log_file_size: int = None,
                log_file_handler_type: int = None,
                mongo_url=None, is_add_elastic_handler=False, is_add_kafka_handler=False,
-               ding_talk_token=None, ding_talk_time_interval=60,
+               ding_talk_token=None, ding_talk_secret=None, ding_talk_time_interval=60,
                mail_handler_config: MailHandlerConfig = MailHandlerConfig(), is_add_mail_handler=False,
                formatter_template: typing.Union[int, logging.Formatter] = None) -> logging.Logger:
     """
@@ -501,6 +503,7 @@ def get_logger(name: typing.Union[str, None], *, log_level_int: int = None, is_a
        :param is_add_elastic_handler: 是否记录到es中。
        :param is_add_kafka_handler: 日志是否发布到kafka。
        :param ding_talk_token:钉钉机器人token
+       :param ding_talk_secret: 钉钉机器人加签密钥
        :param ding_talk_time_interval : 时间间隔，少于这个时间不发送钉钉消息
        :param mail_handler_config : 邮件配置
        :param is_add_mail_handler :是否发邮件
