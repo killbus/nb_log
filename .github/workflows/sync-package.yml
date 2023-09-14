@@ -1,0 +1,82 @@
+name: Sync Package from PyPI
+
+on:
+  push:
+    branches:
+      - sync
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync-package:
+    runs-on: ubuntu-latest
+
+    env:
+      PACKAGE_NAME: "nb_log"
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x  # Change to the desired Python version
+
+      - name: Determine Latest Package Version
+        id: package_version
+        run: |
+          LATEST_VERSION=$(curl -s "https://pypi.org/pypi/$PACKAGE_NAME/json" | jq -r '.info.version')
+
+          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if Branch Exists
+        id: branch_check
+        run: |
+          PACKAGE_VERSION=${{ steps.package_version.outputs.version }}
+          BRANCH_NAME="pypi-${PACKAGE_VERSION}"
+
+          if git ls-remote --exit-code origin "refs/heads/${BRANCH_NAME}"; then
+            echo "Branch ${BRANCH_NAME} already exists, no action needed."
+            echo "branch_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Branch ${BRANCH_NAME} does not exist, creating it."
+            git checkout --orphan "${BRANCH_NAME}"
+            find . -maxdepth 1 ! -name ".git" -exec rm -rf {} \;  # Remove all files and directories except for .git
+            git clean -fxd  # Remove untracked files and directories      
+            echo "branch_exists=false" >> $GITHUB_OUTPUT
+            echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
+          fi
+
+      - name: Download Package from PyPI
+        if: steps.branch_check.outputs.branch_exists == 'false'
+        run: |
+          PACKAGE_VERSION=${{ steps.package_version.outputs.version }}
+          BRANCH_NAME=$BRANCH_NAME  # Retrieve the BRANCH_NAME from the environment
+
+          pip download ${PACKAGE_NAME}==${PACKAGE_VERSION} --no-deps --no-binary=:all: --dest .
+
+          # Extract the downloaded archive
+          tar -xzvf "${PACKAGE_NAME}-${PACKAGE_VERSION}.tar.gz"
+          rm "${PACKAGE_NAME}-${PACKAGE_VERSION}.tar.gz"
+          mv "${PACKAGE_NAME}-${PACKAGE_VERSION}/"* ./
+          rm -rf "${PACKAGE_NAME}-${PACKAGE_VERSION}"
+
+      - name: Commit and Push Changes
+        if: steps.branch_check.outputs.branch_exists == 'false'
+        run: |
+          PACKAGE_VERSION=${{ steps.package_version.outputs.version }}
+
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add .
+          git commit -m "Sync ${PACKAGE_NAME}@${PACKAGE_VERSION} from PyPI"
+          git push -u origin $BRANCH_NAME
+
+      - name: Tag Commit
+        if: steps.branch_check.outputs.branch_exists == 'false'
+        run: |
+          PACKAGE_VERSION=${{ steps.package_version.outputs.version }}
+
+          git tag "pypi-${PACKAGE_VERSION}"
+          git push --tags
