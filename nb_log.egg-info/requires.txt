@@ -1,0 +1,13 @@
+pymongo==4.3.3
+tomorrow3==1.1.0
+concurrent-log-handler==0.9.23
+elasticsearch
+kafka-python==2.0.2
+requests
+flask
+python-json-logger==0.1.10
+nb_filelock
+service-identity
+deprecated
+chained_mode_time_tool
+pywin32
